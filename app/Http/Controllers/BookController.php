@@ -33,4 +33,13 @@ class BookController extends Controller
 
         return view('books.scrape', []);
     }
+    /**
+     * https://lalsaud.medium.com/create-a-web-scraping-application-with-laravel-f6ca48fc08c7
+     *
+     * points to do
+     * Add Export to CSV button and implement functionality
+     * Implement pagination and search functionality using DataTables for scraped data
+     * Write tests and refactor, implement multi-page scraping eg. pagination, infinite scroll or crawling sub-links.
+     * Move the scraping tasks to background jobs using Laravel Queue for efficient scraping of large volume of data.
+     */
 }
