@@ -9,9 +9,8 @@ class BookScraper
     private $urls;
     private $xpath;
 
-    public function __construct($urls)
+    public function __construct(private $urls)
     {
-        $this->urls = $urls;
         $this->xpath = null;
     }
 
