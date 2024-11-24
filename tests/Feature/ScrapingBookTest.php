@@ -24,6 +24,7 @@ class ScrapingBookTest extends TestCase
         $xpath = new \DOMXpath($doc);
 
         $books = $xpath->query("//ol[@class='row']/li");
+        $books = ($books === false) ? null : $books;
         $this->assertNotNull($books);
 
 
