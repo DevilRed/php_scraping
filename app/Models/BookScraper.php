@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\Book;
 
 class BookScraper
 {
-    private $urls;
     private $xpath;
 
     public function __construct(private $urls)
@@ -43,7 +41,7 @@ class BookScraper
     {
         $books = $this->xpath->query("//ol[@class='row']/li");
         if ($books->length < 1) {
-            throw new Exception('No books returned for scraping the page!');
+            throw new \Exception('No books returned for scraping the page!');
         }
 
         foreach ( $books as $book ) {
