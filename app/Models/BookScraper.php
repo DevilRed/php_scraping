@@ -1,18 +1,27 @@
 <?php
 
 namespace App\Models;
+use \DOMXPath;
+use \DOMDocument;
 
 
 class BookScraper
 {
-    private $xpath;
+    private DOMXpath|null $xpath;
 
-    public function __construct(private $urls)
+    /**
+     * @param string[] $urls
+     */
+    public function __construct(private array $urls)
     {
         $this->xpath = null;
     }
 
-    public function process()
+    /**
+     * @return array|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function process(): array
     {
         try {
             $client = new \GuzzleHttp\Client(
@@ -25,9 +34,9 @@ class BookScraper
                 $html = $result->getBody()->getContents();
 
                 // Load DOM Xpath
-                $doc = new \DOMDocument();
+                $doc = new DOMDocument();
                 @$doc->loadHTML($html);
-                $this->xpath = new \DOMXpath($doc);
+                $this->xpath = new DOMXpath($doc);
 
                 $this->parse();
             }
@@ -37,11 +46,11 @@ class BookScraper
         }
     }
 
-    public function parse()
+    public function parse(): void
     {
         $books = $this->xpath->query("//ol[@class='row']/li");
         if ($books->length < 1) {
-            throw new \Exception('No books returned for scraping the page!');
+        throw new \Exception('No books returned for scraping the page!');
         }
 
         foreach ( $books as $book ) {
@@ -57,7 +66,7 @@ class BookScraper
         }
     }
 
-    private function extract($node, $element) {
+    private function extract($node, $element): string {
         $value = $this->xpath->query($node, $element)->item(0)->nodeValue;
         return trim($value);
     }

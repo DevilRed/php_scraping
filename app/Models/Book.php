@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Database\Factories\BookFactory;
 
 class Book extends Model
 {
+    /** @use HasFactory<BookFactory> */
     use HasFactory;
 
     protected $fillable = [

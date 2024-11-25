@@ -62,6 +62,9 @@
         ],
         "analyse": [
             "vendor/bin/phpstan analyse -c phpstan.neon"
+        ],
+        "test": [
+            "php artisan test"
         ]
     },
     "extra": {
