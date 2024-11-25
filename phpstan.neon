@@ -4,6 +4,6 @@ parameters:
         - database/factories
         - database/seeders
         - tests
-    level: 4
+    level: 6
 includes:
     - vendor/nunomaduro/larastan/extension.neon
