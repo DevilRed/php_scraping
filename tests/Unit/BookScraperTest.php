@@ -10,7 +10,7 @@ use App\Models\BookScraper;
 class BookScraperTest extends TestCase
 {
     use RefreshDatabase;
-    protected $bookScraper;
+    protected  BookScraper $bookScraper;
     protected function setUp(): void
     {
         parent::setUp();

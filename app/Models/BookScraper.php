@@ -3,6 +3,7 @@
 namespace App\Models;
 use \DOMXPath;
 use \DOMDocument;
+use \DOMNode;
 
 
 class BookScraper
@@ -66,32 +67,32 @@ class BookScraper
         }
     }
 
-    private function extract($node, $element): string {
+    private function extract(string $node, DOMNode $element): string {
         $value = $this->xpath->query($node, $element)->item(0)->nodeValue;
         return trim($value);
     }
 
-    private function extractPrice($node, $element) {
+    private function extractPrice(string $node, DOMNode $element): string {
         $str = $this->extract($node, $element);
         return trim(preg_replace('/[^0-9.]/', '', $str));
     }
 
-    private function extractRating($node, $element) {
+    private function extractRating(string $node, DOMNode $element): string {
         $str = $this->extract($node, $element);
         return trim(str_replace('star-rating ', '', $str));
     }
 
-    private function extractUrl($replace, $str) {
+    private function extractUrl(string $replace, string $str): string {
         $baseUri = 'https://books.toscrape.com/';
         return $baseUri . str_replace($replace, '', $str);
     }
 
-    private function extractDetails($node, $element) {
+    private function extractDetails(string $node, DOMNode $element): string {
         $str = $this->extract($node, $element);
         return $this->extractUrl('../../../', 'catalogue/' . $str);
     }
 
-    private function extractImage($node, $element) {
+    private function extractImage(string $node, DOMNode $element): string {
         $str = $this->extract($node, $element);
         return $this->extractUrl('../../../../', $str);
     }
