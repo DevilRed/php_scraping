@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6a91981312b72f0d2723a301ae8f8378",
+    "content-hash": "3e129d7780994c403685e48db075ae9b",
     "packages": [
         {
             "name": "brick/math",
@@ -5619,6 +5619,40 @@
         }
     ],
     "packages-dev": [
+        {
+            "name": "driftingly/rector-laravel",
+            "version": "0.27.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/driftingly/rector-laravel.git",
+                "reference": "2a73790294cf302c2959bff16319e794280ddad0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/driftingly/rector-laravel/zipball/2a73790294cf302c2959bff16319e794280ddad0",
+                "reference": "2a73790294cf302c2959bff16319e794280ddad0",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.2 || ^8.0"
+            },
+            "type": "rector-extension",
+            "autoload": {
+                "psr-4": {
+                    "RectorLaravel\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Rector upgrades rules for Laravel Framework",
+            "support": {
+                "issues": "https://github.com/driftingly/rector-laravel/issues",
+                "source": "https://github.com/driftingly/rector-laravel/tree/0.27.0"
+            },
+            "time": "2024-01-03T23:40:50+00:00"
+        },
         {
             "name": "fakerphp/faker",
             "version": "v1.24.1",
