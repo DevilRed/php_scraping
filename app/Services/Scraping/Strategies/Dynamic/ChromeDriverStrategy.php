@@ -14,7 +14,7 @@ use App\Services\Scraping\DTO\JobData;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
-class ChromeDriverStrategy extends BaseScrapingStrategy
+abstract class ChromeDriverStrategy extends BaseScrapingStrategy
 {
     protected RemoteWebDriver $driver;
     protected string $seleniumHost;

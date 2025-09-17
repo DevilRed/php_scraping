@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Models\JobListing;
 use App\Models\ScrapingLog;
 use Carbon\Carbon;
+
 class JobsStatsCommand extends Command
 {
     protected $signature = 'jobs:stats

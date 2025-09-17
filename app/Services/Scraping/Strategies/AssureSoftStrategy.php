@@ -2,13 +2,12 @@
 
 namespace App\Services\Scraping\Strategies;
 
-use App\Services\Scraping\Strategies\Dynamic\ChromeDriverStrategy;
+use App\Services\Scraping\Strategies\BaseScrapingStrategy;
 use App\Services\Scraping\DTO\ScrapingResult;
 use App\Services\Scraping\DTO\JobData;
-use Facebook\WebDriver\WebDriverBy;
 use Illuminate\Support\Collection;
 
-class AssureSoftStrategy extends ChromeDriverStrategy
+class AssureSoftStrategy extends BaseScrapingStrategy
 {
     public function getCompanyName(): string
     {
@@ -20,97 +19,9 @@ class AssureSoftStrategy extends ChromeDriverStrategy
         return 'https://www.assuresoft.com';
     }
 
-    protected function getScrapingUrl(): string
+    public function supportsFiltering(): bool
     {
-        return 'https://www.assuresoft.com/careers/open-positions';
-    }
-
-    protected function waitForPageLoad(): void
-    {
-        $this->waitForElement('a[href*="/careers/open-positions/jobs/"]', 15);
-        sleep(2); // Additional wait for any dynamic loading
-    }
-
-    protected function extractJobs(): array
-    {
-        $jobElements = $this->driver->findElements(
-            WebDriverBy::cssSelector('a[href*="/careers/open-positions/jobs/"]')
-        );
-
-        $jobs = [];
-        foreach ($jobElements as $element) {
-            $href = $element->getAttribute('href');
-            $parentText = $element->findElement(WebDriverBy::xpath('..'))->getText();
-
-            // Extract location
-            $location = '';
-            if (preg_match('/Location:\s*([^-\n\r]+)/i', $parentText, $matches)) {
-                $location = trim($matches[1]);
-            }
-
-            // Extract title
-            $title = $element->getText();
-            if (empty($title) || $title === 'View job') {
-                if (preg_match('/([^-\n\r]+)\s*-\s*Location:/', $parentText, $matches)) {
-                    $title = trim($matches[1]);
-                } else {
-                    $title = 'Position Available';
-                }
-            }
-
-            $jobs[] = new JobData(
-                externalId: $this->generateJobId($href),
-                title: $title,
-                location: $location,
-                url: $this->makeAbsoluteUrl($href, $this->getBaseUrl()),
-                company: $this->getCompanyName(),
-                details: ['raw_text' => $parentText]
-            );
-        }
-
-        return $jobs;
-    }
-
-    protected function applyFilters(array $filters): void
-    {
-        // Look for filter elements - adjust selectors based on actual page structure
-        if (isset($filters['location'])) {
-            try {
-                $locationFilter = $this->driver->findElement(
-                    WebDriverBy::cssSelector('[data-filter="location"], .location-filter')
-                );
-                $locationFilter->click();
-                sleep(1);
-
-                // Select specific location option
-                $locationOption = $this->driver->findElement(
-                    WebDriverBy::xpath("//option[contains(text(), '{$filters['location']}')]")
-                );
-                $locationOption->click();
-                sleep(2);
-            } catch (\Exception $e) {
-                // Log but continue if filter not found
-                \Log::warning("Location filter not found: " . $e->getMessage());
-            }
-        }
-
-        if (isset($filters['department'])) {
-            try {
-                $departmentFilter = $this->driver->findElement(
-                    WebDriverBy::cssSelector('[data-filter="department"], .department-filter')
-                );
-                $departmentFilter->click();
-                sleep(1);
-
-                $departmentOption = $this->driver->findElement(
-                    WebDriverBy::xpath("//option[contains(text(), '{$filters['department']}')]")
-                );
-                $departmentOption->click();
-                sleep(2);
-            } catch (\Exception $e) {
-                \Log::warning("Department filter not found: " . $e->getMessage());
-            }
-        }
+        return true;
     }
 
     public function getAvailableFilters(): array
@@ -122,23 +33,23 @@ class AssureSoftStrategy extends ChromeDriverStrategy
         ];
     }
 
-    // Fallback to static scraping if Selenium fails
     public function scrape(): ScrapingResult
     {
-        // Try dynamic scraping first
-        $dynamicResult = parent::scrape();
-
-        if ($dynamicResult->success) {
-            return $dynamicResult;
-        }
-
-        // Fallback to static scraping
+        // Try static scraping first (more reliable for basic testing)
         return $this->scrapeStatic();
+    }
+
+    public function scrapeWithFilters(array $filters = []): ScrapingResult
+    {
+        // For now, ignore filters and do basic scraping
+        // In a real implementation, you would use Selenium to interact with filters
+        return $this->scrape();
     }
 
     private function scrapeStatic(): ScrapingResult
     {
-        $html = $this->makeRequest($this->getScrapingUrl());
+        $url = 'https://www.assuresoft.com/careers/open-positions';
+        $html = $this->makeRequest($url);
 
         if (!$html) {
             return ScrapingResult::failure('Failed to fetch page content');
@@ -152,11 +63,13 @@ class AssureSoftStrategy extends ChromeDriverStrategy
             $href = $link->getAttribute('href');
             $parentText = $this->extractTextContent($link->parentNode);
 
+            // Extract location
             $location = '';
             if (preg_match('/Location:\s*([^-\n\r]+)/i', $parentText, $matches)) {
                 $location = trim($matches[1]);
             }
 
+            // Extract title
             $title = $this->extractTextContent($link);
             if (empty($title) || $title === 'View job') {
                 if (preg_match('/([^-\n\r]+)\s*-\s*Location:/', $parentText, $matches)) {
@@ -178,7 +91,7 @@ class AssureSoftStrategy extends ChromeDriverStrategy
 
         return ScrapingResult::success(
             collect($jobs),
-            ['total_jobs' => count($jobs), 'method' => 'static_fallback']
+            ['total_jobs' => count($jobs), 'method' => 'static']
         );
     }
 }

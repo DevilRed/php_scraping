@@ -1,9 +1,10 @@
 <?php
 namespace App\Services\Scraping\Contracts;
 
-use App\Services\DTO\ScrapingResult;
+use App\Services\Scraping\DTO\ScrapingResult;
 
-interface ScrapingStrategyInterface {
+interface ScrapingStrategyInterface
+{
     public function scrape(): ScrapingResult;
     public function getCompanyName(): string;
     public function getBaseUrl(): string;

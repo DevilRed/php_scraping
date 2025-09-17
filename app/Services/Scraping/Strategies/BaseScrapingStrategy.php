@@ -2,7 +2,6 @@
 
 namespace App\Services\Scraping\Strategies;
 
-use App\Services\DTO\ScrapingResult;
 use App\Services\Scraping\Contracts\ScrapingStrategyInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
@@ -10,6 +9,7 @@ use DOMDocument;
 use DOMXPath;
 use DOMNode;
 use Illuminate\Support\Facades\Log;
+use App\Services\Scraping\DTO\ScrapingResult;
 
 abstract class BaseScrapingStrategy implements ScrapingStrategyInterface
 {
