@@ -3,8 +3,8 @@
 namespace App\Services\Scraping\Strategies;
 
 use App\Services\Scraping\Contracts\ScrapingStrategyInterface;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\RequestException;
 use DOMDocument;
 use DOMXPath;
 use DOMNode;
@@ -13,18 +13,11 @@ use App\Services\Scraping\DTO\ScrapingResult;
 
 abstract class BaseScrapingStrategy implements ScrapingStrategyInterface
 {
-    protected Client $client;
     protected array $defaultHeaders;
     protected int $timeout = 30;
 
     public function __construct()
     {
-        $this->client = new Client([
-            'timeout' => $this->timeout,
-            'verify' => config('app.env') === 'production',
-            'allow_redirects' => true
-        ]);
-
         $this->defaultHeaders = [
             'User-Agent' => config('scraping.user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'),
             'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -68,12 +61,16 @@ abstract class BaseScrapingStrategy implements ScrapingStrategyInterface
     protected function makeRequest(string $url, array $options = []): ?string
     {
         try {
-            $response = $this->client->get($url, array_merge([
-                'headers' => $this->defaultHeaders
-            ], $options));
+            $headers = array_merge($this->defaultHeaders, $options['headers'] ?? []);
 
-            return $response->getBody()->getContents();
-        } catch (GuzzleException $e) {
+            $response = Http::withHeaders($headers)
+                ->timeout($this->timeout)
+                ->get($url);
+
+            $response->throw();
+
+            return $response->body();
+        } catch (RequestException $e) {
             Log::error("HTTP request failed for {$url}: " . $e->getMessage());
             return null;
         }

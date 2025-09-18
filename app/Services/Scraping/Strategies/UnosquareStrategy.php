@@ -60,11 +60,12 @@ class UnosquareStrategy extends BaseScrapingStrategy
 
         if (is_array($jobsData)) {
             foreach ($jobsData as $job) {
+                $url = $job['url'] ?? $job['link'] ?? '';
                 $jobs[] = new JobData(
-                    externalId: $job['id'] ?? $this->generateJobId($job['url'] ?? ''),
+                    externalId: $job['id'] ?? $this->generateJobId($url),
                     title: $job['title'] ?? $job['position'] ?? 'Unknown Position',
                     location: $job['location'] ?? $job['city'] ?? '',
-                    url: $job['url'] ?? $job['link'] ?? '',
+                    url: $this->makeAbsoluteUrl($url, $this->getBaseUrl()),
                     company: $this->getCompanyName(),
                     details: $job
                 );
@@ -80,63 +81,40 @@ class UnosquareStrategy extends BaseScrapingStrategy
     private function parseHtmlJobs(\DOMXPath $xpath): ScrapingResult
     {
         $jobs = [];
+        // Anchor on the most specific element: the job title div with its exact classes.
+        $titleNodes = $xpath->query('//div[@class="font-bold text-xl font-oswald pt-1"]');
 
-        // Common selectors for job listings
-        $selectors = [
-            '//div[contains(@class, "job")]//a',
-            '//article[contains(@class, "position")]//a',
-            '//li[contains(@class, "job-item")]//a',
-            '//a[contains(@href, "/job") or contains(@href, "/position")]'
-        ];
+        foreach ($titleNodes as $titleNode) {
+            // Find the main container by traversing up from the title
+            $containerNode = $xpath->query('ancestor::a[contains(@class, "shadow-jobContainer")]', $titleNode)->item(0);
 
-        foreach ($selectors as $selector) {
-            $jobElements = $xpath->query($selector);
-
-            if ($jobElements->length > 0) {
-                foreach ($jobElements as $element) {
-                    $href = $element->getAttribute('href');
-                    $title = $this->extractTextContent($element);
-                    $fullUrl = $this->makeAbsoluteUrl($href, $this->getBaseUrl());
-
-                    // Try to find location in parent elements
-                    $location = $this->findLocationInParents($element);
-
-                    $jobs[] = new JobData(
-                        externalId: $this->generateJobId($fullUrl),
-                        title: $title ?: 'Position Available',
-                        location: $location,
-                        url: $fullUrl,
-                        company: $this->getCompanyName(),
-                        details: ['method' => 'html']
-                    );
-                }
-                break; // Stop after finding jobs with first successful selector
+            if (!$containerNode) {
+                continue;
             }
+
+            $href = $containerNode->getAttribute('href');
+            $title = $this->extractTextContent($titleNode);
+
+            $locationNode = $xpath->query('.//div[contains(@class, "text-xs pb-1")]/label', $containerNode)->item(0);
+            $location = $locationNode ? $this->extractTextContent($locationNode) : '';
+
+            if (empty($title) || empty($href) || !str_contains($href, 'jobs/')) {
+                continue;
+            }
+
+            $jobs[] = new JobData(
+                externalId: $this->generateJobId($href),
+                title: $title,
+                location: $location,
+                url: $this->makeAbsoluteUrl($href, $this->getBaseUrl()),
+                company: $this->getCompanyName(),
+                details: ['method' => 'html']
+            );
         }
 
         return ScrapingResult::success(
             collect($jobs),
             ['total_jobs' => count($jobs), 'method' => 'html']
         );
-    }
-
-    private function findLocationInParents(DOMNode $node): string
-    {
-        $current = $node;
-        $maxLevels = 3;
-
-        while ($current->parentNode && $maxLevels > 0) {
-            $current = $current->parentNode;
-            $text = $this->extractTextContent($current);
-
-            // Look for location patterns
-            if (preg_match('/(?:Location:|Remote|Office:)\s*([^-\n\r]+)/i', $text, $matches)) {
-                return trim($matches[1]);
-            }
-
-            $maxLevels--;
-        }
-
-        return '';
     }
 }
