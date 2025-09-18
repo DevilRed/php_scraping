@@ -22,4 +22,13 @@ class ScrapingResult
     {
         return new self(collect(), false, $message, $metadata);
     }
+
+    public function getJobs()
+    {
+        return $this->jobs;
+    }
+    public function wasSuccessful()
+    {
+        return $this->success;
+    }
 }

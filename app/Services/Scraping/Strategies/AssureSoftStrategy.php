@@ -65,7 +65,7 @@ class AssureSoftStrategy extends BaseScrapingStrategy
 
             // Extract location
             $location = '';
-            if (preg_match('/Location:\s*([^-\n\r]+)/i', $parentText, $matches)) {
+            if (preg_match('/Location:\s*(\S+)/i', $parentText, $matches)) {
                 $location = trim($matches[1]);
             }
 
