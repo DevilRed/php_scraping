@@ -19,57 +19,95 @@ class UnosquareStrategy extends BaseScrapingStrategy
         return 'https://people.unosquare.com';
     }
 
-    public function scrape(): ScrapingResult
+    public function scrape($filters = null): ScrapingResult
     {
-        $url = 'https://people.unosquare.com/jobs?filter=';
+        // The main jobs page contains a JSON blob with all the data we need.
+        // This is more robust than hitting a data URL that might have a changing build ID.
+        $url = 'https://people.unosquare.com/jobs';
 
         try {
-            // Try JSON endpoint first
             $html = $this->makeRequest($url, [
-                'headers' => array_merge($this->defaultHeaders, [
-                    'Accept' => 'application/json, text/javascript, */*; q=0.01',
-                    'X-Requested-With' => 'XMLHttpRequest'
-                ])
+                'headers' => $this->defaultHeaders
             ]);
 
             if (!$html) {
                 return ScrapingResult::failure('Failed to fetch page content');
             }
 
-            // Try to detect if it's JSON response
-            $jsonData = json_decode($html, true);
-            if ($jsonData) {
-                return $this->parseJsonJobs($jsonData);
+            $xpath = $this->createDomFromHtml($html);
+            $scriptNode = $xpath->query('//script[@id="__NEXT_DATA__"]')->item(0);
+
+            if (!$scriptNode) {
+                // Fallback to parsing the visible HTML if the JSON script isn't there.
+                return $this->parseHtmlJobs($xpath);
             }
 
-            // Fallback to HTML parsing
-            $xpath = $this->createDomFromHtml($html);
-            return $this->parseHtmlJobs($xpath);
+            $jsonData = json_decode($scriptNode->textContent, true);
+
+            if ($jsonData) {
+                return $this->parseJsonJobs($jsonData, $filters);
+            }
+
+            // If we found the script but couldn't parse it, or it was empty.
+            return ScrapingResult::failure('Failed to parse __NEXT_DATA__ JSON from page.');
 
         } catch (\Exception $e) {
             return ScrapingResult::failure("Failed to scrape Unosquare: " . $e->getMessage());
         }
     }
 
-    private function parseJsonJobs(array $data): ScrapingResult
+    private function parseJsonJobs(array $data, ?string $filters = null): ScrapingResult
     {
         $jobs = [];
 
-        // Adjust based on actual JSON structure
-        $jobsData = $data['jobs'] ?? $data['positions'] ?? $data['data'] ?? $data;
+        $jobsData = $data['pageProps']['allJobsData'] ?? [];
 
-        if (is_array($jobsData)) {
-            foreach ($jobsData as $job) {
-                $url = $job['url'] ?? $job['link'] ?? '';
-                $jobs[] = new JobData(
-                    externalId: $job['id'] ?? $this->generateJobId($url),
-                    title: $job['title'] ?? $job['position'] ?? 'Unknown Position',
-                    location: $job['location'] ?? $job['city'] ?? '',
-                    url: $this->makeAbsoluteUrl($url, $this->getBaseUrl()),
-                    company: $this->getCompanyName(),
-                    details: $job
-                );
+        $filteredJobs = $jobsData;
+        if ($filters) {
+            $filterKeywords = explode('&', $filters);
+            $filterKeywords = array_map('trim', $filterKeywords);
+            $filterKeywords = array_map('strtolower', $filterKeywords);
+            $filterKeywords = array_filter($filterKeywords);
+
+            if (!empty($filterKeywords)) {
+                $filteredJobs = [];
+                foreach ($jobsData as $job) {
+                    $searchText = strtolower(
+                        ($job['JobTitle'] ?? '') . ' ' .
+                        ($job['MainSkill'] ?? '') . ' ' .
+                        ($job['JobDescription'] ?? '')
+                    );
+
+                    foreach ($filterKeywords as $keyword) {
+                        if (str_contains($searchText, $keyword)) {
+                            $filteredJobs[] = $job;
+                            break; // Job matches, move to next job
+                        }
+                    }
+                }
             }
+        }
+
+        foreach ($filteredJobs as $job) {
+            $url = '';
+            $titleWithId = $job['JobTitleWithId'] ?? null;
+            if ($titleWithId) {
+                // Create a slug from "ID - Title" e.g. "7844-business-analyst-product-administration"
+                $slug = strtolower($titleWithId);
+                $slug = str_replace(' - ', '-', $slug);
+                $slug = str_replace(' ', '-', $slug);
+                $slug = preg_replace('/[^a-z0-9-]/', '', $slug);
+                $url = "/jobs/{$slug}";
+            }
+
+            $jobs[] = new JobData(
+                externalId: (string)($job['CareerOpportunityId'] ?? $this->generateJobId($url)),
+                title: $job['JobTitle'] ?? 'Unknown Position',
+                location: $job['OfficeLocation'] ?? '',
+                url: $this->makeAbsoluteUrl($url, $this->getBaseUrl()),
+                company: $this->getCompanyName(),
+                details: $job
+            );
         }
 
         return ScrapingResult::success(
