@@ -103,7 +103,9 @@
             <!-- Jobs by Company Chart -->
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-semibold mb-4">Jobs by Company</h3>
-                <canvas id="jobsByCompanyChart" width="400" height="200"></canvas>
+                <div class="relative h-96">
+                    <canvas id="jobsByCompanyChart"></canvas>
+                </div>
             </div>
 
             <!-- Scraping Performance -->
