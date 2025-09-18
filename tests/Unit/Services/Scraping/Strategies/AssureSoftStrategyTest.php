@@ -1,10 +1,9 @@
 <?php
 
-use App\Services\Scraping\DTO\JobData;
 use App\Services\Scraping\Strategies\AssureSoftStrategy;
-use Illuminate\Support\Facades\Http;
 
-it('correctly scrapes job data from static html', function () {
+
+it('correctly scrapes job data from realistic static html', function () {
     // 1. Arrange
     $mockHtml = <<<'HTML'
         <div class="job-info">
@@ -13,7 +12,7 @@ it('correctly scrapes job data from static html', function () {
             <span> Location: </span>
             <span class="country">Bolivia</span>
           </li>
-                            <li>
+          <li>
             <a class="btn c-btn-persian-blue c-btn-bold" href="/careers/open-positions/jobs/e_board/4599879006"> View job </a>
           </li>
         </div>
@@ -22,9 +21,9 @@ it('correctly scrapes job data from static html', function () {
           <span class="job-title-card"><strong> Java Spring Developer </strong></span>
           <li class="job-location-card">
             <span> Location: </span>
-            <span class="country">Bolivia</span>
+            <span class="country">LATAM</span>
           </li>
-                            <li>
+          <li>
             <a class="btn c-btn-persian-blue c-btn-bold" href="/careers/open-positions/jobs/e_board/4598020006"> View job </a>
           </li>
         </div>
@@ -47,7 +46,7 @@ it('correctly scrapes job data from static html', function () {
     // Assert first job
     expect($jobs[0]->title)->toBe('PHP Software Developer');
     expect($jobs[0]->location)->toBe('Bolivia');
-    expect($jobs[0]->url)->toBe('https://www.assuresoft.com//careers/open-positions/jobs/e_board/4599879006');
+    expect($jobs[0]->url)->toBe('https://www.assuresoft.com/careers/open-positions/jobs/e_board/4599879006');
 
     // Assert second job
     expect($jobs[1]->title)->toBe('Java Spring Developer');

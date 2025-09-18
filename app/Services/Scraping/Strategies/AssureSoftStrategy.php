@@ -56,27 +56,24 @@ class AssureSoftStrategy extends BaseScrapingStrategy
         }
 
         $xpath = $this->createDomFromHtml($html);
-        $jobLinks = $xpath->query('//a[contains(@href, "/careers/open-positions/jobs/")]');
+        $jobNodes = $xpath->query('//div[contains(@class, "job-info")]');
 
         $jobs = [];
-        foreach ($jobLinks as $link) {
-            $href = $link->getAttribute('href');
-            $parentText = $this->extractTextContent($link->parentNode);
+        foreach ($jobNodes as $jobNode) {
+            // Extract title
+            $titleNode = $xpath->query('.//span[contains(@class, "job-title-card")]/strong', $jobNode)->item(0);
+            $title = $titleNode ? trim($this->extractTextContent($titleNode)) : 'Position Available';
 
             // Extract location
-            $location = '';
-            if (preg_match('/Location:\s*(\S+)/i', $parentText, $matches)) {
-                $location = trim($matches[1]);
-            }
+            $locationNode = $xpath->query('.//li[contains(@class, "job-location-card")]/span[@class="country"]', $jobNode)->item(0);
+            $location = $locationNode ? trim($this->extractTextContent($locationNode)) : '';
 
-            // Extract title
-            $title = $this->extractTextContent($link);
-            if (empty($title) || $title === 'View job') {
-                if (preg_match('/([^-\n\r]+)\s*-\s*Location:/', $parentText, $matches)) {
-                    $title = trim($matches[1]);
-                } else {
-                    $title = 'Position Available';
-                }
+            // Extract URL
+            $linkNode = $xpath->query('.//a[contains(@href, "/careers/open-positions/jobs/")]', $jobNode)->item(0);
+            $href = $linkNode ? $linkNode->getAttribute('href') : '';
+
+            if (empty($href)) {
+                continue; // Skip if no valid job link is found
             }
 
             $jobs[] = new JobData(
@@ -85,7 +82,7 @@ class AssureSoftStrategy extends BaseScrapingStrategy
                 location: $location,
                 url: $this->makeAbsoluteUrl($href, $this->getBaseUrl()),
                 company: $this->getCompanyName(),
-                details: ['raw_text' => $parentText, 'method' => 'static']
+                details: ['method' => 'static']
             );
         }
 
