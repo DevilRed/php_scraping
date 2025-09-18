@@ -2,9 +2,10 @@
 
 namespace App\Services\Scraping\Strategies;
 
-use App\Services\Scraping\Strategies\BaseScrapingStrategy;
-use App\Services\Scraping\DTO\ScrapingResult;
 use App\Services\Scraping\DTO\JobData;
+use App\Services\Scraping\DTO\ScrapingResult;
+use Exception;
+use DOMXPath;
 
 class JalaSoftStrategy extends BaseScrapingStrategy
 {
@@ -30,69 +31,51 @@ class JalaSoftStrategy extends BaseScrapingStrategy
         try {
             $xpath = $this->createDomFromHtml($html);
             return $this->parseJobListings($xpath);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return ScrapingResult::failure("Failed to scrape JalaSoft: " . $e->getMessage());
         }
     }
 
-    private function parseJobListings(\DOMXPath $xpath): ScrapingResult
+    private function parseJobListings(DOMXPath $xpath): ScrapingResult
     {
         $jobs = [];
 
-        // Multiple selectors to try
-        $selectors = [
-            '//a[contains(@href, "/careers") and contains(@href, "/job")]',
-            '//a[contains(@href, "/position")]',
-            '//div[contains(@class, "career") or contains(@class, "job")]//a',
-            '//li[contains(@class, "position")]//a'
-        ];
+        // 1. Get all title nodes
+        $titleNodes = $xpath->query("//div[contains(@class, 'BaseAccordionContent_TextColumn__ISNtN')]//p[contains(@class, 'TextV3_Body__Large__2KzsJ')]");
 
-        foreach ($selectors as $selector) {
-            $elements = $xpath->query($selector);
+        // 2. Get all description nodes
+        $descriptionNodes = $xpath->query("//div[contains(@class, 'BaseAccordionContent_ItemContainer__MJlFD')]");
 
-            if ($elements->length > 0) {
-                foreach ($elements as $element) {
-                    $href = $element->getAttribute('href');
-                    $title = $this->extractTextContent($element);
-                    $fullUrl = $this->makeAbsoluteUrl($href, $this->getBaseUrl());
+        // 3. Pair them by index
+        $jobCount = $titleNodes->length;
+        for ($i = 0; $i < $jobCount; $i++) {
+            $titleNode = $titleNodes->item($i);
+            // The description might not exist for every title, so we check
+            $descriptionNode = $descriptionNodes->item($i);
 
-                    // Extract additional info from parent context
-                    $parentText = $this->extractTextContent($element->parentNode);
-                    $location = $this->extractLocation($parentText);
-
-                    $jobs[] = new JobData(
-                        externalId: $this->generateJobId($fullUrl),
-                        title: $title ?: 'Career Opportunity',
-                        location: $location,
-                        url: $fullUrl,
-                        company: $this->getCompanyName(),
-                        details: ['context' => $parentText, 'method' => 'static']
-                    );
-                }
-                break;
+            if (!$titleNode) {
+                continue;
             }
+
+            $title = $this->extractTextContent($titleNode);
+            $description = $descriptionNode ? $this->extractTextContent($descriptionNode) : '';
+
+            // Since there's no unique URL per job, we create one based on the title
+            $pseudoUrl = '#' . str_replace(' ', '-', strtolower($title));
+
+            $jobs[] = new JobData(
+                externalId: $this->generateJobId($title),
+                title: $title,
+                location: 'Bolivia', // Location seems to be static for this page
+                url: $this->makeAbsoluteUrl($pseudoUrl, $this->getBaseUrl() . '/careers/open-positions'),
+                company: $this->getCompanyName(),
+                details: ['description' => $description, 'method' => 'static-paired']
+            );
         }
 
         return ScrapingResult::success(
             collect($jobs),
-            ['total_jobs' => count($jobs), 'method' => 'static']
+            ['total_jobs' => count($jobs), 'method' => 'static-paired']
         );
-    }
-
-    private function extractLocation(string $text): string
-    {
-        $locationPatterns = [
-            '/Location:\s*([^-\n\r]+)/i',
-            '/Remote|On-?site|Hybrid/i',
-            '/(?:Santa Cruz|Cochabamba|La Paz|Bolivia|LATAM)/i'
-        ];
-
-        foreach ($locationPatterns as $pattern) {
-            if (preg_match($pattern, $text, $matches)) {
-                return trim($matches[1] ?? $matches[0]);
-            }
-        }
-
-        return '';
     }
 }
