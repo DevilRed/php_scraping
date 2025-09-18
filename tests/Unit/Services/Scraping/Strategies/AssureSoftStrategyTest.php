@@ -7,13 +7,26 @@ use Illuminate\Support\Facades\Http;
 it('correctly scrapes job data from static html', function () {
     // 1. Arrange
     $mockHtml = <<<'HTML'
-        <div>
-            Senior QA Engineer - Location: Bolivia
-            <a href="/careers/open-positions/jobs/senior-qa-engineer">View job</a>
+        <div class="job-info">
+          <span class="job-title-card"><strong> PHP Software Developer </strong></span>
+          <li class="job-location-card">
+            <span> Location: </span>
+            <span class="country">Bolivia</span>
+          </li>
+                            <li>
+            <a class="btn c-btn-persian-blue c-btn-bold" href="/careers/open-positions/jobs/e_board/4599879006"> View job </a>
+          </li>
         </div>
-        <div>
-            Junior Developer - Location: LATAM
-            <a href="/careers/open-positions/jobs/junior-developer">View job</a>
+
+        <div class="job-info">
+          <span class="job-title-card"><strong> Java Spring Developer </strong></span>
+          <li class="job-location-card">
+            <span> Location: </span>
+            <span class="country">Bolivia</span>
+          </li>
+                            <li>
+            <a class="btn c-btn-persian-blue c-btn-bold" href="/careers/open-positions/jobs/e_board/4598020006"> View job </a>
+          </li>
         </div>
     HTML;
 
@@ -32,12 +45,12 @@ it('correctly scrapes job data from static html', function () {
     expect($jobs)->toHaveCount(2);
 
     // Assert first job
-    expect($jobs[0]->title)->toBe('Senior QA Engineer');
+    expect($jobs[0]->title)->toBe('PHP Software Developer');
     expect($jobs[0]->location)->toBe('Bolivia');
-    expect($jobs[0]->url)->toBe('https://www.assuresoft.com/careers/open-positions/jobs/senior-qa-engineer');
+    expect($jobs[0]->url)->toBe('https://www.assuresoft.com//careers/open-positions/jobs/e_board/4599879006');
 
     // Assert second job
-    expect($jobs[1]->title)->toBe('Junior Developer');
+    expect($jobs[1]->title)->toBe('Java Spring Developer');
     expect($jobs[1]->location)->toBe('LATAM');
-    expect($jobs[1]->url)->toBe('https://www.assuresoft.com/careers/open-positions/jobs/junior-developer');
+    expect($jobs[1]->url)->toBe('https://www.assuresoft.com/careers/open-positions/jobs/e_board/4598020006');
 });
