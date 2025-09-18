@@ -180,6 +180,7 @@
                 isLoading: false,
 
                 init() {
+                    this.destroyCharts();
                     this.initCharts();
                     // Auto-refresh logs every 30 seconds
                     setInterval(() => this.refreshLogs(), 30000);
@@ -256,9 +257,12 @@
                 },
 
                 initCharts() {
+                    if (window.jobsByCompanyChartInstance) {
+                        window.jobsByCompanyChartInstance.destroy();
+                    }
                     // Jobs by Company Chart
                     const ctx = document.getElementById('jobsByCompanyChart').getContext('2d');
-                    new Chart(ctx, {
+                    window.jobsByCompanyChartInstance = new Chart(ctx, {
                         type: 'doughnut',
                         data: {
                             labels: {!! json_encode($jobsByCompany->keys()) !!},
@@ -279,7 +283,13 @@
                             maintainAspectRatio: false
                         }
                     });
-                }
+                },
+                destroyCharts() {
+                    if (window.jobsByCompanyChartInstance) {
+                        window.jobsByCompanyChartInstance.destroy();
+                        window.jobsByCompanyChartInstance = null;
+                    }
+                },
             }
         }
     </script>
